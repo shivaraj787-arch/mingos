@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mingos Smart Canteen Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f8;
+    }
+    header {
+      background: #283593;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    header span {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    main {
+      padding: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      padding: 15px;
+      flex: 1 1 340px;
+      min-width: 320px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 0;
+      color: #333;
+    }
+    h3 {
+      margin-top: 10px;
+      font-size: 15px;
+      color: #444;
+    }
+    .slots {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .slots li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      background: #e8eaf6;
+      font-size: 14px;
+    }
+    .slots button {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      background: #3949ab;
+      color: #fff;
+    }
+    .slots span.full {
+      color: #c62828;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f5;
+    }
+    input[type="number"] {
+      width: 60px;
+      padding: 3px;
+    }
+    select, button, input[type="text"] {
+      padding: 4px 6px;
+      font-size: 13px;
+      margin-top: 5px;
+    }
+    button.primary {
+      background: #1e88e5;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button.primary:disabled {
+      background: #90caf9;
+      cursor: not-allowed;
+    }
+    .badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: #fff;
+    }
+    .badge.ready { background: #43a047; }
+    .badge.placed { background: #fb8c00; }
+    .badge.collected { background: #757575; }
+    .token-box {
+      background: #e3f2fd;
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .qr-box {
+      margin-top: 5px;
+      padding: 6px;
+      border-radius: 4px;
+      background: #ffffff;
+      border: 1px dashed #90a4ae;
+      font-family: monospace;
+      font-size: 11px;
+      word-break: break-all;
+    }
+    .flex-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .label {
+      font-size: 13px;
+      color: #555;
+      min-width: 80px;
+    }
+    .admin-small {
+      font-size: 11px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Mingos Smart Canteen – Demo</h1>
+  <span>RVCE • 11:00 AM Break • Client-side prototype</span>
+</header>
+
+<main>
+  <!-- Student area -->
+  <section class="card">
+    <h2>1. Choose Time Slot</h2>
+    <ul class="slots" id="slotList"></ul>
+
+    <h3>2. Select Items for <span id="selectedSlotLabel">no slot selected</span></h3>
+    <div id="menuSection">
+      <table>
+        <thead>
+        <tr>
+          <th>Item</th>
+          <th>Type</th>
+          <th>Price</th>
+          <th>Qty</th>
+        </tr>
+        </thead>
+        <tbody id="menuTableBody"></tbody>
+      </table>
+
+      <div class="flex-row">
+        <div class="label">Payment:</div>
+        <select id="paymentMethod">
+          <option value="online">Online</option>
+          <option value="cash">Cash</option>
+        </select>
+      </div>
+
+      <button class="primary" id="placeOrderBtn" disabled>Place Order</button>
+      <div class="token-box" id="orderResult" style="display:none;"></div>
+    </div>
+  </section>
+
+  <!-- Student orders -->
+  <section class="card">
+    <h2>Your Orders (This Session)</h2>
+    <table>
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Token</th>
+        <th>Slot</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>QR</th>
+      </tr>
+      </thead>
+      <tbody id="studentOrdersBody"></tbody>
+    </table>
+  </section>
+
+  <!-- Admin / staff area -->
+  <section class="card">
+    <h2>Staff View – Today’s Orders</h2>
+    <p class="admin-small">Use this to simulate counter staff scanning QR and marking orders as collected.</p>
+    <table>
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Token</th>
+        <th>Slot</th>
+        <th>Method</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+      </thead>
+      <tbody id="adminOrdersBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+  // ---- Demo data ----
+  const slots = [
+    { id: 1, label: "11:00–11:10", maxOrders: 5, currentOrders: 0 },
+    { id: 2, label: "11:10–11:20", maxOrders: 5, currentOrders: 0 }
+  ];
+
+  const menuItems = [
+    { id: 1, name: "Idli", type: "Breakfast", price: 25, isExpress: false },
+    { id: 2, name: "Masala Dosa", type: "Breakfast", price: 40, isExpress: false },
+    { id: 3, name: "Veg Puff", type: "Express", price: 15, isExpress: true },
+    { id: 4, name: "Tea", type: "Express", price: 10, isExpress: true }
+  ];
+
+  let selectedSlotId = null;
+  let orders = []; // stored in memory only
+
+  // ---- Helpers ----
+  function renderSlots() {
+    const ul = document.getElementById("slotList");
+    ul.innerHTML = "";
+    slots.forEach(s => {
+      const li = document.createElement("li");
+      const spanLabel = document.createElement("span");
+      spanLabel.textContent = `${s.label} (${s.currentOrders}/${s.maxOrders})`;
+      li.appendChild(spanLabel);
+
+      if (s.currentOrders >= s.maxOrders) {
+        const full = document.createElement("span");
+        full.className = "full";
+        full.textContent = "FULL";
+        li.appendChild(full);
+      } else {
+        const btn = document.createElement("button");
+        btn.textContent = "Select";
+        btn.onclick = () => {
+          selectedSlotId = s.id;
+          document.getElementById("selectedSlotLabel").textContent = s.label;
+          document.getElementById("placeOrderBtn").disabled = false;
+        };
+        li.appendChild(btn);
+      }
+
+      ul.appendChild(li);
+    });
+  }
+
+  function renderMenu() {
+    const tbody = document.getElementById("menuTableBody");
+    tbody.innerHTML = "";
+    menuItems.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.name}</td>
+        <td>${item.type}</td>
+        <td>₹${item.price}</td>
+        <td><input type="number" min="0" value="0" data-item-id="${item.id}"></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderOrders() {
+    const studentBody = document.getElementById("studentOrdersBody");
+    const adminBody = document.getElementById("adminOrdersBody");
+    studentBody.innerHTML = "";
+    adminBody.innerHTML = "";
+
+    orders.forEach(o => {
+      const slotLabel = slots.find(s => s.id === o.slotId)?.label || "-";
+
+      // student row
+      const trS = document.createElement("tr");
+      trS.innerHTML = `
+        <td>${o.id}</td>
+        <td>${o.token}</td>
+        <td>${slotLabel}</td>
+        <td>₹${o.total}</td>
+        <td><span class="badge ${o.status}">${o.status}</span></td>
+        <td><div class="qr-box">${o.qr}</div></td>
+      `;
+      studentBody.appendChild(trS);
+
+      // admin row
+      const trA = document.createElement("tr");
+      trA.innerHTML = `
+        <td>${o.id}</td>
+        <td>${o.token}</td>
+        <td>${slotLabel}</td>
+        <td>${o.payment}</td>
+        <td><span class="badge ${o.status}">${o.status}</span></td>
+        <td>
+          <button onclick="markCollected(${o.id})" ${o.status === "collected" ? "disabled" : ""}>
+            Mark collected
+          </button>
+        </td>
+      `;
+      adminBody.appendChild(trA);
+    });
+  }
+
+  function generateQRString(orderId, token, slotId) {
+    // simple text QR payload (could be encoded into real QR later)
+    return `MINGOS|ORDER:${orderId}|TOKEN:${token}|SLOT:${slotId}|RVCE`;
+  }
+
+  // ---- Actions ----
+  document.getElementById("placeOrderBtn").addEventListener("click", () => {
+    if (!selectedSlotId) {
+      alert("Please select a time slot.");
+      return;
+    }
+    const slot = slots.find(s => s.id === selectedSlotId);
+    if (!slot || slot.currentOrders >= slot.maxOrders) {
+      alert("Selected slot is full. Choose another.");
+      return;
+    }
+
+    // collect quantities
+    const inputs = document.querySelectorAll("#menuTableBody input[type='number']");
+    let items = [];
+    let total = 0;
+    inputs.forEach(inp => {
+      const qty = parseInt(inp.value, 10) || 0;
+      if (qty > 0) {
+        const id = parseInt(inp.getAttribute("data-item-id"), 10);
+        const item = menuItems.find(m => m.id === id);
+        if (item) {
+          items.push({ item, qty });
+          total += item.price * qty;
+        }
+      }
+    });
+
+    if (items.length === 0) {
+      alert("Please select at least one item.");
+      return;
+    }
+
+    slot.currentOrders += 1;
+    const token = slot.currentOrders;
+    const orderId = orders.length + 1;
+    const paymentMethod = document.getElementById("paymentMethod").value;
+
+    const qr = generateQRString(orderId, token, slot.id);
+    const order = {
+      id: orderId,
+      slotId: slot.id,
+      token: token,
+      items: items,
+      total: total,
+      status: "placed",
+      payment: paymentMethod,
+      qr: qr
+    };
+    orders.push(order);
+
+    // reset quantities
+    inputs.forEach(i => i.value = 0);
+
+    // show token info
+    const resDiv = document.getElementById("orderResult");
+    resDiv.style.display = "block";
+    resDiv.innerHTML = `
+      <strong>Order placed!</strong><br>
+      Token: <b>${token}</b><br>
+      Slot: ${slot.label}<br>
+      Amount: ₹${total}<br>
+      QR payload:
+      <div class="qr-box">${qr}</div>
+    `;
+
+    renderSlots();
+    renderOrders();
+  });
+
+  // exposed globally for admin buttons
+  function markCollected(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+      order.status = "collected";
+      renderOrders();
+    }
+  }
+  window.markCollected = markCollected;
+
+  // ---- Init ----
+  renderSlots();
+  renderMenu();
+  renderOrders();
+</script>
+</body>
+</html>
